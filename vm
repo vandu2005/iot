@@ -1,0 +1,284 @@
+#include <ESP8266WiFi.h>
+#include <Adafruit_MQTT.h>
+#include <Adafruit_MQTT_Client.h>
+#include "AdafruitIO_WiFi.h"
+
+// Replace with your network credentials and Adafruit IO credentials
+#define WIFI_SSID "Galaxy1 F34"
+#define WIFI_PASS "12435687"s
+#define AIO_USERNAME "GanesanM"
+#define AIO_KEY "aio_YBbH78ANinVqHKaEHtxnzL5uWoIT"
+
+// Create an ESP8266 WiFiClient class to connect to the MQTT server
+WiFiClient client;
+
+// Create an Adafruit IO client instance
+AdafruitIO_WiFi io(AIO_USERNAME, AIO_KEY, WIFI_SSID, WIFI_PASS);
+
+// Create a feed instance
+AdafruitIO_Feed *led = io.feed("led");
+
+// GPIO pin where the LED is connected
+const int ledPin = 2; // Built-in LED on most NodeMCU boards
+
+void setup() {
+// Start the Serial Monitor
+  Serial.begin(115200);
+  delay(10);
+
+  // Set the LED pin as output
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
+
+  // Connect to Wi-Fi and Adafruit IO
+  Serial.print("Connecting to Adafruit IO");
+  io.connect();
+
+  // Wait for a connection
+  while(io.status() < AIO_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+  Serial.println();
+  Serial.println(io.statusText());
+
+  // Set up a message handler for the 'led' feed
+  led->onMessage(handleMessage);
+
+}
+
+void loop() {
+  // io.run() is required to keep the connection to Adafruit IO alive
+  io.run();
+}
+
+// Message handler function for the 'led' feed
+void handleMessage(AdafruitIO_Data *data) {
+  // Print the received value to the Serial Monitor
+  Serial.print("Received: ");
+  Serial.println(data->value());
+
+  // Turn the LED on or off based on the received value
+  if (data->toPinLevel() == HIGH) {
+    digitalWrite(ledPin, HIGH);
+  } else {
+    digitalWrite(ledPin, LOW);
+  }
+}
+
+-------------------------------------------
+#include <ESP8266WiFi.h> // ESP8266WiFi.h library
+
+const char* ssid     = "Galaxy1 F34";
+const char* password = "12435687";
+const char* host = "api.thingspeak.com";
+const char* writeAPIKey = "VAEHUT75PRED8S70";
+
+int temp;
+void setup() {
+ // Initialize sensor
+ pinMode(2,OUTPUT);
+ pinMode(4, INPUT);
+ Serial.begin(115200);
+  delay(1000);
+
+//  Connect to WiFi network
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+  }
+}
+
+void loop() {
+ 
+  temp=analogRead(A0);
+
+// make TCP connections
+  WiFiClient client;
+  const int httpPort = 80;
+  if (!client.connect(host, httpPort)) {
+    return;
+  }
+
+  // Request to the server
+  client.println(sendThingspeak());
+    delay(1000);
+      if (temp>=700)
+  {digitalWrite(2,HIGH);
+    }
+    else
+    {
+      digitalWrite(2,LOW);
+      }
+      Serial.print(temp);
+      Serial.print("\n");
+}
+
+String sendThingspeak()
+{
+  String command =
+            String("GET ") + 
+            "/update?key=" +
+            writeAPIKey +
+            "&field1=" +
+            String(temp) + "\r\n" +
+            "HTTP/1.1 200 OK\r\n" +
+            "Host: " + host + "\r\n" +
+            "Connection: close\r\n\r\n";
+          Serial.print(command);
+          return command;
+}
+
+-------------------------------------------
+/*
+ *  This sketch demonstrates how to scan WiFi networks. 
+ *  The API is almost the same as with the WiFi Shield library, 
+ *  the most obvious difference being the different file you need to include:
+ */
+#include "ESP8266WiFi.h"
+
+void setup() {
+  Serial.begin(9600);
+
+  // Set WiFi to station mode and disconnect from an AP if it was previously connected
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect();
+  delay(100);
+
+  Serial.println("Setup done");
+}
+
+void loop() {
+  Serial.println("scan start");
+
+  // WiFi.scanNetworks will return the number of networks found
+  int n = WiFi.scanNetworks();
+  Serial.println("scan done");
+  if (n == 0)
+    Serial.println("no networks found");
+  else
+  {
+    Serial.print(n);
+    Serial.println(" networks found");
+    for (int i = 0; i < n; ++i)
+    {
+      // Print SSID and RSSI for each network found
+      Serial.print(i + 1);
+      Serial.print(": ");
+      Serial.print(WiFi.SSID(i));
+      Serial.print(" (");
+      Serial.print(WiFi.RSSI(i));
+      Serial.print(")");
+      Serial.println((WiFi.encryptionType(i) == ENC_TYPE_NONE)?" ":"*");
+      delay(10);
+    }
+  }
+  Serial.println("");
+
+  // Wait a bit before scanning again
+  delay(5000);
+}
+
+-----------------------------------------------------------------
+#include <ESP8266WiFi.h>
+
+// Replace with your network credentials
+const char* ssid = "Galaxy F41";
+const char* password = "12435687";
+
+WiFiServer server(80);
+
+// GPIO pin where the LED is connected
+const int ledPin = 2; // Built-in LED on ESP8266
+
+void setup() {
+  Serial.begin(115200);
+  delay(10);
+
+  // Set the LED pin as output
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
+
+  // Connect to Wi-Fi
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  // Start the server
+  server.begin();
+  Serial.println("Server started");
+
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+
+  // Wait until the client sends some data
+  Serial.println("New client");
+  while(!client.available()){
+    delay(1);
+  }
+
+  // Read the first line of the request
+  String request = client.readStringUntil('\r');
+  Serial.println(request);
+  client.flush();
+
+  // Match the request
+  if (request.indexOf("/LED=ON") != -1)  {
+    digitalWrite(ledPin, HIGH);
+  } 
+  else if (request.indexOf("/LED=OFF") != -1)  {
+    digitalWrite(ledPin, LOW);
+  }
+
+  // Return the response
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-Type: text/html");
+  client.println(""); // Important to send a blank line after the headers
+  client.println("<!DOCTYPE HTML>");
+  client.println("<html>");
+  client.println("<body>");
+
+  client.print("LED is now: ");
+  if(digitalRead(ledPin) == HIGH) {
+    client.print("ON");
+  } else {
+    client.print("OFF");
+  }
+
+  client.println("<br><br>");
+  // client.println("<a href=\"/LED=ON\">Turn On</a>");
+  // client.println("<br>");
+  // client.println("<a href=\"/LED=OFF\">Turn Off</a>");
+  client.println("<button onclick=\"location.href='/LED=ON'\" style=\"width:100px;height:50px\">Turn On</button>");
+  client.println("<button onclick=\"location.href='/LED=OFF'\" style=\"width:100px;height:50px\">Turn Off</button>");
+  
+  client.println("</body>");
+  client.println("</html>");
+
+  // The client will actually be disconnected when the function returns and 'client' object is destroyed
+  delay(1);
+  Serial.println("Client disconnected");
+  Serial.println("");
+
+}
+
+------------------------------------------------------------------------------------------------------
+
